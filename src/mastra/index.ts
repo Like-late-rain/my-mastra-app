@@ -11,16 +11,22 @@ const aliasMap: Record<string, keyof typeof agents> = {
 export const mastra = new Mastra({
   agents,
   deployer: new CloudflareDeployer({
-    projectName: process.env.CF_PROJECT_NAME ?? "my-mastra-worker",
+    projectName: process.env.CF_PROJECT_NAME ?? "agent-mastra",
     env: {
       NODE_ENV: process.env.NODE_ENV ?? "production",
     },
   }),
 });
 
-const baseGetAgent = mastra.getAgent.bind(mastra);
-mastra.getAgent = ((name) => {
-  const resolvedName =
-    aliasMap[name as string] ?? (name as keyof typeof agents);
-  return baseGetAgent(resolvedName);
-}) as typeof mastra.getAgent;
+const baseGetAgent =
+  typeof mastra.getAgent === "function"
+    ? mastra.getAgent.bind(mastra)
+    : null;
+
+if (baseGetAgent) {
+  mastra.getAgent = ((name) => {
+    const resolvedName =
+      aliasMap[name as string] ?? (name as keyof typeof agents);
+    return baseGetAgent(resolvedName);
+  }) as typeof mastra.getAgent;
+}
